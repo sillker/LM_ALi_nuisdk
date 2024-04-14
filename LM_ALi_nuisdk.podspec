@@ -12,17 +12,17 @@ Pod::Spec.new do |s|
     s.author       = { "sillker" => "269055130@qq.com" }
     s.platform     = :ios, "11.0"
     s.source       = { :git => "https://github.com/sillker/LM_ALi_nuisdk.git", :tag => s.version}
-  
-    #s.resources = "**/Resources.bundle"
+    s.source_files  = "audio/**/*.{h,m,mm}",'*.framework/Headers/*.h'
+    s.resources = "**/**/Resources.bundle"
     #s.vendored_frameworks = "**/nuisdk.framework"
   
     #s.resources = "Resources/*.*"
-    s.vendored_frameworks = 'nuisdk.framework'
+    s.vendored_frameworks = '*.framework'
 
     #s.frameworks = "QuartzCore","Foundation"
 
     s.library   = "iconv"
-  
+      
     s.pod_target_xcconfig = {
         'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'arm64'
     }
