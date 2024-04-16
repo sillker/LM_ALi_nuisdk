@@ -200,7 +200,7 @@ static dispatch_queue_t sr_work_queue;
     self.recognizerProgress = progress;
     self.recognizerCompleted = completed;
     
-//    [self startTimer];
+    [self startTimer];
     
     dispatch_async(sr_work_queue, ^{
         if (_nui != nil) {
