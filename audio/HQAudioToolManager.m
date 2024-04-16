@@ -39,6 +39,8 @@ static dispatch_queue_t sr_work_queue;
 /// 当前任务(识别器与合成器结束回调方法名相同，因此这里加个区分)
 //@property (nonatomic, assign) HQAudioTaskType currentTask;
 
+@property (nonatomic, strong) NSTimer *recorderTimer;
+
 @end
 
 @implementation HQAudioToolManager
@@ -76,7 +78,7 @@ static dispatch_queue_t sr_work_queue;
     //请注意此处的参数配置，其中账号相关需要按照genInitParams的说明填入后才可访问服务
     NSString * initParam = [self genInitParamsWithAPPKey:appKey token:token];
     
-    NuiResultCode *initCode = [_nui nui_initialize:[initParam UTF8String] logLevel:LOG_LEVEL_VERBOSE saveLog:save_log];
+    NuiResultCode *initCode = [_nui nui_initialize:[initParam UTF8String] logLevel:LOG_LEVEL_NONE saveLog:save_log];
     NSString * parameters = [self genParams];
     NuiResultCode *paramCode = [_nui nui_set_params:[parameters UTF8String]];
     TLog(@"+++ nuisdk init:%d -- setparams:%d",initCode,paramCode);
@@ -165,22 +167,50 @@ static dispatch_queue_t sr_work_queue;
     return testDirectory;
 }
 
+/// 录音音量显示
+- (void)recorderVoiceChange
+{
+    NSInteger volum = _voiceRecorder.currentVoiceVolume;
+    if (self.recorderVoiceChangeBlock) {
+        self.recorderVoiceChangeBlock(volum);
+    }
+}
 
 #pragma mark - public
 
+- (void)startTimer
+{
+    [self stopTimer];
+    _recorderTimer = [NSTimer scheduledTimerWithTimeInterval:0.017 target:self selector:@selector(recorderVoiceChange) userInfo:nil repeats:YES];
+    [[NSRunLoop currentRunLoop] addTimer:_recorderTimer forMode:NSRunLoopCommonModes];
+}
+
+- (void)stopTimer
+{
+    if (_recorderTimer) {
+        [_recorderTimer invalidate];
+        _recorderTimer = nil;
+    }
+}
+
 - (void)startRecognizerWithProgress:(void (^)(NSString *))progress completed:(void (^)(NSString *, NSString *, NSError *))completed
 {
+    [self stopTimer];
     // 设置回调
     self.recognizerProgress = progress;
     self.recognizerCompleted = completed;
+    
+//    [self startTimer];
     
     dispatch_async(sr_work_queue, ^{
         if (_nui != nil) {
             //若要使用VAD模式，则需要设置nls_config参数启动在线VAD模式(见genParams())
             NuiResultCode startCode = [_nui nui_dialog_start:MODE_P2T dialogParam:NULL];
             TLog(@"+++ nuisdk startCode:%d", startCode);
+            
         } else {
             TLog(@"in StartButHandler no nui alloc");
+            [self stopTimer];
         }
     });
 }
@@ -188,7 +218,7 @@ static dispatch_queue_t sr_work_queue;
 - (void)endRecognizer
 {
 //    self.recordedVoiceData = nil;
-    
+    [self stopTimer];
     if (_nui != nil) {
         [_nui nui_dialog_cancel:NO];
         [_voiceRecorder stop:YES];
@@ -204,6 +234,7 @@ static dispatch_queue_t sr_work_queue;
 - (void)cancelRecognizer
 {
     self.recordedVoiceData = nil;
+    [self stopTimer];
     
     _recognizerProgress = nil;
     _recognizerCompleted = nil;
@@ -301,8 +332,17 @@ static dispatch_queue_t sr_work_queue;
          */
         
         NSDictionary *dict = result.mj_JSONObject;
+        if (![dict isKindOfClass:[NSDictionary class]]) {
+            result = @"";
+        }
         dict = [dict objectForKey:@"payload"];
+        if (![dict isKindOfClass:[NSDictionary class]]) {
+            result = @"";
+        }
         result = [dict objectForKey:@"result"];
+        if (![result isKindOfClass:[NSString class]] || [result isEqualToString:@"嗯"]) {
+            result = @"";//不说话，会产生“嗯”，直接过滤掉
+        }
 //        _recognizerAudioText = result;
         dispatch_async(dispatch_get_main_queue(), ^{
             if (self.recognizerCompleted && nuiEvent == EVENT_ASR_RESULT) {

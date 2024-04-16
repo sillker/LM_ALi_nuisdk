@@ -15,6 +15,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 + (instancetype)sharedInstance;
 
+@property (nonatomic, copy) void (^recorderVoiceChangeBlock)(NSInteger volume);
+
 - (void)initNuiSDKWithAPPKey:(NSString *)appKey token:(NSString *)token;
 
 /// 开始语音识别
