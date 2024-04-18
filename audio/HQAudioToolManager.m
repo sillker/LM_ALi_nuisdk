@@ -9,11 +9,12 @@
 
 #import "HQAudioToolManager.h"
 #import "nuisdk/NeoNui.h"
-#import "NLSVoiceRecorder.h"
+//#import "NLSVoiceRecorder.h"
 #import <AudioToolbox/AudioToolbox.h>
 #import <AdSupport/ASIdentifierManager.h>
 #import "MJExtension/MJExtension.h"
 #import <AVFoundation/AVFoundation.h>
+#import "ChatSoundRecorder.h"
 
 //typedef NS_ENUM(NSUInteger, HQAudioTaskType) {
 //    HQAudioTaskTypeNone = 0, // 暂无任务
@@ -25,11 +26,12 @@ static BOOL save_wav = YES;
 static BOOL save_log = YES;
 static dispatch_queue_t sr_work_queue;
 
-@interface HQAudioToolManager()<NlsVoiceRecorderDelegate, NeoNuiSdkDelegate>
+@interface HQAudioToolManager()</*NlsVoiceRecorderDelegate,*/ NeoNuiSdkDelegate>
 
 @property(nonatomic,strong) NeoNui* nui;
-@property(nonatomic,strong) NlsVoiceRecorder *voiceRecorder;
+//@property(nonatomic,strong) NlsVoiceRecorder *voiceRecorder;
 @property(nonatomic,strong) NSMutableData *recordedVoiceData;
+@property(nonatomic,strong) ChatSoundRecorder *voiceRecorder;
 
 /// 当前语音识别录音文本
 //@property (nonatomic, copy) NSString *recognizerAudioText;
@@ -40,6 +42,9 @@ static dispatch_queue_t sr_work_queue;
 //@property (nonatomic, assign) HQAudioTaskType currentTask;
 
 @property (nonatomic, strong) NSTimer *recorderTimer;
+
+@property (nonatomic, strong) NSString *appkey;
+@property (nonatomic, strong) NSString *token;
 
 @end
 
@@ -59,8 +64,10 @@ static dispatch_queue_t sr_work_queue;
 {
     self = [super init];
     if (self) {
-        _voiceRecorder = [[NlsVoiceRecorder alloc] init];
-        _voiceRecorder.delegate = self;
+//        _voiceRecorder = [[NlsVoiceRecorder alloc] init];
+//        _voiceRecorder.delegate = self;
+        
+        _voiceRecorder = [ChatSoundRecorder sharedManager];
         sr_work_queue = dispatch_queue_create("NuiSRController", DISPATCH_QUEUE_CONCURRENT);
     }
     return self;
@@ -76,13 +83,15 @@ static dispatch_queue_t sr_work_queue;
     }
     
     //请注意此处的参数配置，其中账号相关需要按照genInitParams的说明填入后才可访问服务
-    NSString * initParam = [self genInitParamsWithAPPKey:appKey token:token];
+//    NSString * initParam = [self genInitParamsWithAPPKey:appKey token:token];
+//    
+//    NuiResultCode *initCode = [_nui nui_initialize:[initParam UTF8String] logLevel:LOG_LEVEL_NONE saveLog:save_log];
+//    NSString * parameters = [self genParams];
+//    NuiResultCode *paramCode = [_nui nui_set_params:[parameters UTF8String]];
+//    TLog(@"+++ nuisdk init:%d -- setparams:%d",initCode,paramCode);
+//    TLog(@"+++++ nui SDK 版本：%@", [NSString stringWithUTF8String:[_nui nui_get_version]]);
     
-    NuiResultCode *initCode = [_nui nui_initialize:[initParam UTF8String] logLevel:LOG_LEVEL_NONE saveLog:save_log];
-    NSString * parameters = [self genParams];
-    NuiResultCode *paramCode = [_nui nui_set_params:[parameters UTF8String]];
-    TLog(@"+++ nuisdk init:%d -- setparams:%d",initCode,paramCode);
-    TLog(@"+++++ nui SDK 版本：%@", [NSString stringWithUTF8String:[_nui nui_get_version]]);
+    [self initReconfigWithAPPKey:appKey token:token];
 }
 
 - (NSString*)genInitParamsWithAPPKey:(NSString *)appKey token:(NSString *)token
@@ -119,33 +128,33 @@ static dispatch_queue_t sr_work_queue;
     return jsonStr;
 }
 
-- (NSString*)genParams
-{
-    NSMutableDictionary *nls_config = [NSMutableDictionary dictionary];
-    [nls_config setValue:@YES forKey:@"enable_intermediate_result"]; // 必填
-//    参数可根据实际业务进行配置 https://help.aliyun.com/document_detail/173298.html?spm=a2c4g.173528.0.0.47f05398HEpSxW
-
-    //若要使用VAD模式，则需要设置nls_config参数启动在线VAD模式(见genParams())
-    //[nls_config setValue:@true forKey:@"enable_voice_detection"];
-    //[nls_config setValue:@10000 forKey:@"max_start_silence"];
-    //[nls_config setValue:@800 forKey:@"max_end_silence"];
-
-//    [nls_config setValue:@"<更新token>" forKey:@"token"];
-//    [nls_config setValue:@true forKey:@"enable_punctuation_prediction"];
-//    [nls_config setValue:@true forKey:@"enable_inverse_text_normalization"];
-
-//    [nls_config setValue:@16000 forKey:@"sample_rate"];
-//    [nls_config setValue:@"opus" forKey:@"sr_format"];
-    NSMutableDictionary *dictM = [NSMutableDictionary dictionary];
-    [dictM setObject:nls_config forKey:@"nls_config"];
-    [dictM setValue:@(SERVICE_TYPE_ASR) forKey:@"service_type"]; // 必填
-//    如果有HttpDns则可进行设置
-//    [dictM setObject:[_utils getDirectIp] forKey:@"direct_ip"];
-    
-    NSData *data = [NSJSONSerialization dataWithJSONObject:dictM options:NSJSONWritingPrettyPrinted error:nil];
-    NSString * jsonStr = [[NSString alloc]initWithData:data encoding:NSUTF8StringEncoding];
-    return jsonStr;
-}
+//- (NSString*)genParams
+//{
+//    NSMutableDictionary *nls_config = [NSMutableDictionary dictionary];
+//    [nls_config setValue:@YES forKey:@"enable_intermediate_result"]; // 必填
+////    参数可根据实际业务进行配置 https://help.aliyun.com/document_detail/173298.html?spm=a2c4g.173528.0.0.47f05398HEpSxW
+//
+//    //若要使用VAD模式，则需要设置nls_config参数启动在线VAD模式(见genParams())
+//    //[nls_config setValue:@true forKey:@"enable_voice_detection"];
+//    //[nls_config setValue:@10000 forKey:@"max_start_silence"];
+//    //[nls_config setValue:@800 forKey:@"max_end_silence"];
+//
+////    [nls_config setValue:@"<更新token>" forKey:@"token"];
+////    [nls_config setValue:@true forKey:@"enable_punctuation_prediction"];
+////    [nls_config setValue:@true forKey:@"enable_inverse_text_normalization"];
+//
+////    [nls_config setValue:@8000 forKey:@"sample_rate"];
+////    [nls_config setValue:@"opus" forKey:@"sr_format"];
+//    NSMutableDictionary *dictM = [NSMutableDictionary dictionary];
+//    [dictM setObject:nls_config forKey:@"nls_config"];
+//    [dictM setValue:@(SERVICE_TYPE_ASR) forKey:@"service_type"]; // 必填
+////    如果有HttpDns则可进行设置
+////    [dictM setObject:[_utils getDirectIp] forKey:@"direct_ip"];
+//    
+//    NSData *data = [NSJSONSerialization dataWithJSONObject:dictM options:NSJSONWritingPrettyPrinted error:nil];
+//    NSString * jsonStr = [[NSString alloc]initWithData:data encoding:NSUTF8StringEncoding];
+//    return jsonStr;
+//}
 
 - (NSString *)dirDoc 
 {
@@ -170,7 +179,7 @@ static dispatch_queue_t sr_work_queue;
 /// 录音音量显示
 - (void)recorderVoiceChange
 {
-    NSInteger volum = _voiceRecorder.currentVoiceVolume;
+    NSInteger volum = _voiceRecorder.getCurrentPower;
     if (self.recorderVoiceChangeBlock) {
         self.recorderVoiceChangeBlock(volum);
     }
@@ -195,58 +204,74 @@ static dispatch_queue_t sr_work_queue;
 
 - (void)startRecognizerWithProgress:(void (^)(NSString *))progress completed:(void (^)(NSString *, NSString *, NSError *))completed
 {
-    [self stopTimer];
+//    [self stopTimer];
     // 设置回调
     self.recognizerProgress = progress;
     self.recognizerCompleted = completed;
     
-    [self startTimer];
+//    [self startTimer];
+//    
+//    dispatch_async(sr_work_queue, ^{
+//        if (_nui != nil) {
+//            //若要使用VAD模式，则需要设置nls_config参数启动在线VAD模式(见genParams())
+//            NuiResultCode startCode = [_nui nui_dialog_start:MODE_P2T dialogParam:NULL];
+//            TLog(@"+++ nuisdk startCode:%d", startCode);
+//            
+//        } else {
+//            TLog(@"in StartButHandler no nui alloc");
+//            [self stopTimer];
+//        }
+//    });
     
-    dispatch_async(sr_work_queue, ^{
-        if (_nui != nil) {
-            //若要使用VAD模式，则需要设置nls_config参数启动在线VAD模式(见genParams())
-            NuiResultCode startCode = [_nui nui_dialog_start:MODE_P2T dialogParam:NULL];
-            TLog(@"+++ nuisdk startCode:%d", startCode);
-            
-        } else {
-            TLog(@"in StartButHandler no nui alloc");
-            [self stopTimer];
-        }
-    });
+    
+    NSDate *now = [NSDate date];
+    NSDateFormatter *dateFormater = [[NSDateFormatter alloc] init];
+    [dateFormater setDateFormat:@"yyyyMMddHHmmss"];
+    NSString *name = [NSString stringWithFormat:@"%@.wav",[dateFormater stringFromDate:now]];
+    _voiceRecorder.recordFileName = [[self createDir] stringByAppendingString:name];
+    [_voiceRecorder startRecord];
 }
 
 - (void)endRecognizer
 {
-//    self.recordedVoiceData = nil;
-    [self stopTimer];
-    if (_nui != nil) {
-        [_nui nui_dialog_cancel:NO];
-        [_voiceRecorder stop:YES];
-    } else {
-        TLog(@"in StopButHandler no nui alloc");
-    }
+////    self.recordedVoiceData = nil;
+//    [self stopTimer];
+//    if (_nui != nil) {
+//        [_nui nui_dialog_cancel:NO];
+////        [_voiceRecorder stop:YES];
+//        [_voiceRecorder stopRecord];
+//    } else {
+//        TLog(@"in StopButHandler no nui alloc");
+//    }
+//    
+////    _recognizerProgress = nil;
+////    _recognizerCompleted = nil;
+//    TLog(@"+++++ %s, 结束语音识别", __func__);
     
-//    _recognizerProgress = nil;
-//    _recognizerCompleted = nil;
-    TLog(@"+++++ %s, 结束语音识别", __func__);
+    [_voiceRecorder stopRecord];
+    
+    [self startR];
 }
 
 - (void)cancelRecognizer
 {
-    self.recordedVoiceData = nil;
-    [self stopTimer];
+//    self.recordedVoiceData = nil;
+//    [self stopTimer];
+//    
+//    _recognizerProgress = nil;
+//    _recognizerCompleted = nil;
+//    
+//    if (_nui != nil) {
+//        [_nui nui_dialog_cancel:NO];
+////        [_voiceRecorder stop:YES];
+//        [_voiceRecorder stopRecord];
+//    } else {
+//        TLog(@"in StopButHandler no nui alloc");
+//    }
+//    
+//    TLog(@"+++++ %s, 取消语音识别", __func__);
     
-    _recognizerProgress = nil;
-    _recognizerCompleted = nil;
-    
-    if (_nui != nil) {
-        [_nui nui_dialog_cancel:NO];
-        [_voiceRecorder stop:YES];
-    } else {
-        TLog(@"in StopButHandler no nui alloc");
-    }
-    
-    TLog(@"+++++ %s, 取消语音识别", __func__);
+    [_voiceRecorder stopRecord];
 }
 
 - (void)startSynthesizer:(NSString *)text speakProgress:(void (^)(int, int, int))speakProgress completed:(void (^)(NSString *, NSError *))completed
@@ -362,8 +387,10 @@ static dispatch_queue_t sr_work_queue;
         });
     } else if (nuiEvent == EVENT_MIC_ERROR) {
         TLog(@"MIC ERROR");
-        [_voiceRecorder stop:true];
-        [_voiceRecorder start];
+//        [_voiceRecorder stop:true];
+//        [_voiceRecorder start];
+        [_voiceRecorder stopRecord];
+        [_voiceRecorder startRecord];
     }
     
 //    else if (nuiEvent == EVENT_VAD_END) {
@@ -413,15 +440,170 @@ static dispatch_queue_t sr_work_queue;
 -(void)onNuiAudioStateChanged:(NuiAudioState)state{
     TLog(@"onNuiAudioStateChanged state=%u", state);
     if (state == STATE_CLOSE || state == STATE_PAUSE) {
-        [_voiceRecorder stop:YES];
+//        [_voiceRecorder stop:YES];
+        [_voiceRecorder stopRecord];
     } else if (state == STATE_OPEN){
         self.recordedVoiceData = [NSMutableData data];
-        [_voiceRecorder start];
+//        [_voiceRecorder start];
+        [_voiceRecorder startRecord];
     }
 }
 
 -(void)onNuiRmsChanged:(float)rms {
     TLog(@"onNuiRmsChanged rms=%f", rms);
+}
+
+
+
+
+
+
+- (void)initReconfigWithAPPKey:(NSString *)appKey token:(NSString *)token
+{
+    _appkey = appKey;
+    _token = token;
+    //请注意此处的参数配置，其中账号相关需要按照genInitParams的说明填入后才可访问服务
+    NSString * initParam = [self genReconfigInitParamsWithAPPKey:appKey token:token];
+
+    [_nui nui_initialize:[initParam UTF8String] logLevel:LOG_LEVEL_VERBOSE saveLog:save_log];
+    NSString * parameters = [self genParams];
+    [_nui nui_set_params:[parameters UTF8String]];
+}
+
+-(NSString*) genReconfigInitParamsWithAPPKey:(NSString *)appKey token:(NSString *)token 
+{
+    NSString *bundlePath = [[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent:@"Resources.bundle"];
+    NSString *id_string = [[[ASIdentifierManager sharedManager] advertisingIdentifier] UUIDString];
+    NSString *debug_path = [self createDir];
+    TLog(@"+++ tuisdk device_id: %s", [id_string UTF8String]);
+
+    //获取token方式：
+    NSMutableDictionary *dictM = [NSMutableDictionary dictionary];
+
+    //账号和项目创建
+    //  ak_id ak_secret app_key如何获得,请查看https://help.aliyun.com/document_detail/72138.html
+    [dictM setObject:appKey forKey:@"app_key"]; // 必填
+
+    //方法1：
+    //  首先ak_id ak_secret app_key如何获得,请查看https://help.aliyun.com/document_detail/72138.html
+    //  然后请看 https://help.aliyun.com/document_detail/466615.html 使用其中方案一获取临时凭证
+    //  此方案简介: 远端服务器使用以下方法获得有效时限的临时凭证, 下发给移动端进行使用, 保证账号信息ak_id和ak_secret不被泄露
+    //  获得Token方法(运行在APP服务端): https://help.aliyun.com/document_detail/450255.html?spm=a2c4g.72153.0.0.79176297EyBj4k
+    [dictM setObject:token forKey:@"token"]; // 必填
+
+    //方法2：
+    //  STS获取临时凭证方法暂不支持
+
+    //方法3：（强烈不推荐，存在阿里云账号泄露风险）
+    //  参考NuiSdkUtils类的实现在端上访问阿里云Token服务获取SDK进行获取。请勿将ak/sk存在本地或端侧环境。
+    //  此方法优点: 端侧获得Token, 无需搭建APP服务器。
+    //  此方法缺点: 端侧获得ak/sk账号信息, 极易泄露。
+    //    [_utils getTicket:dictM];
+
+    //工作目录路径，SDK从该路径读取配置文件
+    [dictM setObject:bundlePath forKey:@"workspace"]; // 必填
+    //debug目录。当初始化SDK时的save_log参数取值为true时，该目录用于保存中间音频文件
+    [dictM setObject:debug_path forKey:@"debug_path"];
+    [dictM setObject:id_string forKey:@"device_id"]; // 必填, 推荐填入具有唯一性的id, 方便定位问题
+    [dictM setObject:@"https://nls-gateway.cn-shanghai.aliyuncs.com/stream/v1/FlashRecognizer" forKey:@"url"]; // 必填
+
+    //FullMix = 0   // 选用此模式开启本地功能并需要进行鉴权注册
+    //FullCloud = 1 // 在线实时语音识别可以选这个
+    //FullLocal = 2 // 选用此模式开启本地功能并需要进行鉴权注册
+    //AsrMix = 3    // 选用此模式开启本地功能并需要进行鉴权注册
+    //AsrCloud = 4  // 在线一句话识别可以选这个
+    //AsrLocal = 5  // 选用此模式开启本地功能并需要进行鉴权注册
+    [dictM setObject:@"1" forKey:@"service_mode"]; // 必填
+
+    NSData *data = [NSJSONSerialization dataWithJSONObject:dictM options:NSJSONWritingPrettyPrinted error:nil];
+    NSString * jsonStr = [[NSString alloc]initWithData:data encoding:NSUTF8StringEncoding];
+    return jsonStr;
+}
+
+-(NSString*) genParams {
+    NSMutableDictionary *nls_config = [NSMutableDictionary dictionary];
+    NSMutableDictionary *dictM = [NSMutableDictionary dictionary];
+    [dictM setObject:nls_config forKey:@"nls_config"];
+
+//    如果有HttpDns则可进行设置
+//    [dictM setObject:[_utils getDirectIp] forKey:@"direct_ip"];
+    
+    NSData *data = [NSJSONSerialization dataWithJSONObject:dictM options:NSJSONWritingPrettyPrinted error:nil];
+    NSString * jsonStr = [[NSString alloc]initWithData:data encoding:NSUTF8StringEncoding];
+    return jsonStr;
+}
+
+-(NSString*) genStartParams {
+                NSMutableDictionary *nls_config = [NSMutableDictionary dictionary];
+    NSMutableDictionary *dictM = [NSMutableDictionary dictionary];
+    [dictM setObject:_voiceRecorder.recordFileName forKey:@"file_path"];
+    [nls_config setObject:@"wav" forKey:@"format"];
+    [dictM setObject:nls_config forKey:@"nls_config"];
+    
+    NSData *data = [NSJSONSerialization dataWithJSONObject:dictM options:NSJSONWritingPrettyPrinted error:nil];
+    NSString * jsonStr = [[NSString alloc]initWithData:data encoding:NSUTF8StringEncoding];
+    NSLog(@"start params %@", jsonStr);
+    return jsonStr;
+}
+
+- (void)startR
+{
+    NSString *params = [self genStartParams];
+    char task_id[33] = {0};
+    [_nui nui_file_trans_start:[params UTF8String] taskId:task_id];
+}
+
+
+-(void)onFileTransEventCallback:(NuiCallbackEvent)nuiEvent
+                      asrResult:(const char *)asr_result
+                         taskId:(const char *)task_id
+                       ifFinish:(bool)finish
+                        retCode:(int)code {
+    TLog(@"onNuiEventCallback event %d finish %d", nuiEvent, finish);
+    if (nuiEvent == EVENT_FILE_TRANS_CONNECTED) {
+//        [myself showAsrResult:@"连接成功，正在上传..."];
+    } else if (nuiEvent == EVENT_FILE_TRANS_UPLOADED) {
+//        [myself showAsrResult:@"完成上传，正在转写..."];
+    } else if (nuiEvent == EVENT_FILE_TRANS_RESULT) {
+        NSString *result = [NSString stringWithUTF8String:asr_result];
+//        [myself showAsrResult:result];
+        NSDictionary *dict = result.mj_JSONObject;
+        if (![dict isKindOfClass:[NSDictionary class]]) {
+            result = @"";
+        }
+        NSDictionary *flash_result = [dict objectForKey:@"flash_result"];
+        if (![flash_result isKindOfClass:[NSDictionary class]]) {
+            result = @"";
+        }
+        NSArray *sentences = [flash_result objectForKey:@"sentences"];
+        if ([sentences isKindOfClass:[NSArray class]]) {
+            result = @"";
+            for (NSDictionary *tempDic in sentences) {
+                NSString *text = tempDic[@"text"];
+                if ([text isKindOfClass:[NSString class]]) {
+                    result = [result stringByAppendingString:text];
+                }
+            }
+        }
+        if (![result isKindOfClass:[NSString class]] ) {
+            result = @"";
+        }
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (self.recognizerCompleted) {
+                self.recognizerCompleted(result, _voiceRecorder.recordFileName, nil);
+            }
+        });
+    } else if (nuiEvent == EVENT_ASR_ERROR) {
+        TLog(@"EVENT_ASR_ERROR error[%d]", code);
+        NSString *result = [NSString stringWithUTF8String:asr_result];
+//        [myself showAsrResult:result];
+    }
+
+//    if (finish) {
+//        // 任务完成
+//        [myself showStart];
+//    }
+    return;
 }
 
 @end

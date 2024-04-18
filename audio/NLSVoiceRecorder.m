@@ -220,8 +220,10 @@ static void inputBufferHandler(void *                          inUserData,
         format.mChannelsPerFrame = 1;
         format.mFormatFlags = kLinearPCMFormatFlagIsSignedInteger | kLinearPCMFormatFlagIsPacked;
         format.mBitsPerChannel = 16;
-        format.mBytesPerPacket =  (format.mBitsPerChannel >> 3) * format.mChannelsPerFrame;
-        format.mBytesPerFrame = format.mBytesPerPacket;
+        format.mBytesPerPacket =  (format.mBitsPerChannel / 8) * format.mChannelsPerFrame;
+        //每包的字节数
+        format.mBytesPerPacket = format.mBytesPerFrame;
+        //每帧的字节数
         format.mFramesPerPacket = 1;
         
         // queue
