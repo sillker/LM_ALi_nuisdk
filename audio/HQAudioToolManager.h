@@ -21,6 +21,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 /// 开始语音识别
 - (void)startRecognizerWithProgress:(void(^)(NSString *result))progress completed:(void(^)(NSString *result, NSString *audioPath, NSError *error))completed;
+- (void)startRecognizerWithBegin:(void(^)(NSString *result))begin completed:(void(^)(NSString *result, NSString *audioPath, NSError *error))completed;
 
 /// 停止语音识别
 - (void)cancelRecognizer;

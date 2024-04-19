@@ -37,6 +37,7 @@ static dispatch_queue_t sr_work_queue;
 //@property (nonatomic, copy) NSString *recognizerAudioText;
 @property (nonatomic, copy) void(^recognizerCompleted)(NSString *result, NSString *audioPath, NSError *error);
 @property (nonatomic, copy) void(^recognizerProgress)(NSString *result);
+@property (nonatomic, copy) void(^recognizerBegin)(NSString *result);
 
 /// 当前任务(识别器与合成器结束回调方法名相同，因此这里加个区分)
 //@property (nonatomic, assign) HQAudioTaskType currentTask;
@@ -204,24 +205,31 @@ static dispatch_queue_t sr_work_queue;
 
 - (void)startRecognizerWithProgress:(void (^)(NSString *))progress completed:(void (^)(NSString *, NSString *, NSError *))completed
 {
-//    [self stopTimer];
+    [self stopTimer];
     // 设置回调
     self.recognizerProgress = progress;
     self.recognizerCompleted = completed;
     
-//    [self startTimer];
-//    
-//    dispatch_async(sr_work_queue, ^{
-//        if (_nui != nil) {
-//            //若要使用VAD模式，则需要设置nls_config参数启动在线VAD模式(见genParams())
-//            NuiResultCode startCode = [_nui nui_dialog_start:MODE_P2T dialogParam:NULL];
-//            TLog(@"+++ nuisdk startCode:%d", startCode);
-//            
-//        } else {
-//            TLog(@"in StartButHandler no nui alloc");
-//            [self stopTimer];
-//        }
-//    });
+    [self startTimer];
+    
+    dispatch_async(sr_work_queue, ^{
+        if (_nui != nil) {
+            //若要使用VAD模式，则需要设置nls_config参数启动在线VAD模式(见genParams())
+            NuiResultCode startCode = [_nui nui_dialog_start:MODE_P2T dialogParam:NULL];
+            TLog(@"+++ nuisdk startCode:%d", startCode);
+            
+        } else {
+            TLog(@"in StartButHandler no nui alloc");
+            [self stopTimer];
+        }
+    });
+}
+
+- (void)startRecognizerWithBegin:(void(^)(NSString *result))begin completed:(void(^)(NSString *result, NSString *audioPath, NSError *error))completed
+{
+    // 设置回调
+    self.recognizerBegin = begin;
+    self.recognizerCompleted = completed;
     
     
     NSDate *now = [NSDate date];
@@ -249,6 +257,10 @@ static dispatch_queue_t sr_work_queue;
 //    TLog(@"+++++ %s, 结束语音识别", __func__);
     
     [_voiceRecorder stopRecord];
+    
+    if (self.recognizerBegin) {
+        self.recognizerBegin(@"");
+    }
     
     [self startR];
 }
@@ -465,7 +477,7 @@ static dispatch_queue_t sr_work_queue;
     //请注意此处的参数配置，其中账号相关需要按照genInitParams的说明填入后才可访问服务
     NSString * initParam = [self genReconfigInitParamsWithAPPKey:appKey token:token];
 
-    [_nui nui_initialize:[initParam UTF8String] logLevel:LOG_LEVEL_VERBOSE saveLog:save_log];
+    [_nui nui_initialize:[initParam UTF8String] logLevel:LOG_LEVEL_NONE saveLog:save_log];
     NSString * parameters = [self genParams];
     [_nui nui_set_params:[parameters UTF8String]];
 }
@@ -597,6 +609,9 @@ static dispatch_queue_t sr_work_queue;
         TLog(@"EVENT_ASR_ERROR error[%d]", code);
         NSString *result = [NSString stringWithUTF8String:asr_result];
 //        [myself showAsrResult:result];
+        if (self.recognizerCompleted) {
+            self.recognizerCompleted(nil, nil, nil);
+        }
     }
 
 //    if (finish) {
