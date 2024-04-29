@@ -223,6 +223,9 @@ void inputBufferHandler(void *inUserData, AudioQueueRef inAQ, AudioQueueBufferRe
         AudioQueueStop(audioQRef, true);
         AudioFileClose(_recordFileID);
         AudioQueueDispose(audioQRef, TRUE);
+
+        UInt32 doChangeDefaultRoute = 1;
+        AudioSessionSetProperty(kAudioSessionProperty_OverrideCategoryDefaultToSpeaker,sizeof(doChangeDefaultRoute), &doChangeDefaultRoute);
     }
 }
 
