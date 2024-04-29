@@ -1,7 +1,7 @@
 Pod::Spec.new do |s|
 
     s.name         = "LM_ALi_nuisdk"
-    s.version      = "1.0.3"
+    s.version      = "1.0.4"
     s.summary      = "a li nuisdk "
     s.description  = <<-DESC
                   a li nuisdk

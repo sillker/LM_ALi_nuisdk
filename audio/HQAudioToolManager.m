@@ -8,7 +8,7 @@
     
 
 #import "HQAudioToolManager.h"
-#import "nuisdk/NeoNui.h"
+#import "NeoNui.h"
 //#import "NLSVoiceRecorder.h"
 #import <AudioToolbox/AudioToolbox.h>
 #import <AdSupport/ASIdentifierManager.h>
