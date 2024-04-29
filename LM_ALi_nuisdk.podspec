@@ -1,7 +1,7 @@
 Pod::Spec.new do |s|
 
     s.name         = "LM_ALi_nuisdk"
-    s.version      = "1.0.2"
+    s.version      = "1.0.3"
     s.summary      = "a li nuisdk "
     s.description  = <<-DESC
                   a li nuisdk
@@ -22,6 +22,7 @@ Pod::Spec.new do |s|
     #s.frameworks = "QuartzCore","Foundation"
 
     s.library   = "iconv"
+    s.dependency 'MJExtension'
       
     s.pod_target_xcconfig = {
         'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'arm64'
