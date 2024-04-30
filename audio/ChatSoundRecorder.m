@@ -13,7 +13,7 @@
 #define YBufferDurationSeconds  0.2
 #define YDefaultSampleRate  16000
 
-#define YDefalutChannel  1
+#define YDefalutChannel  2
 #define YBitsPerChannel  16
 
 @interface ChatSoundRecorder() {
@@ -63,7 +63,7 @@
 
 -  (void)initFormat {
     recordFormat.mSampleRate =  YDefaultSampleRate;  //采样率
-    recordFormat.mChannelsPerFrame = YDefalutChannel; //声道数量
+    recordFormat.mChannelsPerFrame = YDefalutChannel; //声道数量(转mp3必须双通道)
     //编码格式
     recordFormat.mFormatID = kAudioFormatLinearPCM;
     recordFormat.mFormatFlags = kLinearPCMFormatFlagIsSignedInteger | kLinearPCMFormatFlagIsPacked;
@@ -223,9 +223,6 @@ void inputBufferHandler(void *inUserData, AudioQueueRef inAQ, AudioQueueBufferRe
         AudioQueueStop(audioQRef, true);
         AudioFileClose(_recordFileID);
         AudioQueueDispose(audioQRef, TRUE);
-
-        UInt32 doChangeDefaultRoute = 1;
-        AudioSessionSetProperty(kAudioSessionProperty_OverrideCategoryDefaultToSpeaker,sizeof(doChangeDefaultRoute), &doChangeDefaultRoute);
     }
 }
 
